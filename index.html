@@ -1,13 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-<h1 style="text-align: center;">Cell Division (Mitosis) — Interactive Animation | Class 9 Biology By - Aarush Maharana</h1>
-
+<title>Cell Division Interactive Animation By- Aarush Maharana</title>
 
 <style>
-  
   :root{
     --bg-1:#eef6f3;
     --bg-2:#e7f2ff;
@@ -27,12 +26,15 @@
     --chromo-a-dark:#c23a4d;
     --chromo-b:#3f7fd9;
     --chromo-b-dark:#2c5fae;
+    --chromo-crossover:#b364d9;
     --spindle:#f4b942;
 
     --accent:#1f8a6c;
     --accent-dark:#166b53;
     --accent-soft:#e3f5ed;
     --warn:#d9772e;
+    --meiosis-accent:#7c4dff;
+    --meiosis-dark:#512da8;
 
     --radius-lg:28px;
     --radius-md:16px;
@@ -57,7 +59,6 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  
   .app{
     min-height:100vh;
     display:flex;
@@ -78,11 +79,21 @@
     margin:0 0 4px;
     color:var(--accent-dark);
     letter-spacing:0.3px;
+    transition: color 0.3s ease;
   }
   header.top p.sub{
     margin:0;
     color:var(--ink-soft);
     font-size:clamp(13px,2.2vw,15px);
+  }
+
+  .mode-select-bar {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    width: 100%;
+    max-width: 980px;
   }
 
   .stage-frame{
@@ -93,9 +104,8 @@
     box-shadow:var(--shadow-pop);
     border:1px solid var(--line);
     overflow:hidden;
-    margin-top:14px;
+    margin-top:4px;
   }
-
 
   .progress-row{
     display:flex;
@@ -125,7 +135,6 @@
     border-color:var(--accent);
   }
 
-
   .canvas-wrap{
     position:relative;
     width:100%;
@@ -144,7 +153,6 @@
     display:block;
   }
 
-
   .stage-info{
     text-align:center;
     padding:6px 22px 18px;
@@ -154,7 +162,7 @@
     font-size:clamp(19px,3.4vw,26px);
     color:var(--accent-dark);
     margin:0 0 6px;
-    transition:opacity .25s ease;
+    transition:opacity .25s ease, color 0.3s ease;
   }
   .stage-desc{
     font-size:clamp(14px,2.4vw,17px);
@@ -172,7 +180,6 @@
     text-transform:uppercase;
     opacity:0.75;
   }
-
 
   .controls{
     width:100%;
@@ -212,7 +219,7 @@
     font-size:15px;
     font-weight:600;
     box-shadow:var(--shadow-soft);
-    transition:transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+    transition:transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease, border-color .15s ease;
     min-height:48px;
     min-width:48px;
     justify-content:center;
@@ -226,6 +233,19 @@
     border-color:var(--accent);
   }
   .btn.primary:hover{ background:var(--accent-dark); }
+
+  .btn.toggle-mode {
+    background: var(--paper);
+    color: var(--accent-dark);
+    border: 2px dashed var(--accent);
+    padding: 8px 20px;
+    font-size: 14px;
+  }
+  .btn.toggle-mode.active-mode {
+    background: var(--accent);
+    color: #fff;
+    border-style: solid;
+  }
 
   .btn.ghost{
     background:transparent;
@@ -262,7 +282,6 @@
     font-weight:600;
     cursor:pointer;
   }
-
 
   .stage-chips{
     width:100%;
@@ -302,18 +321,16 @@
     padding:0 10px;
   }
 
-
   @media (max-width:600px){
     .canvas-wrap{ aspect-ratio: 4/5; max-height:54vh; }
     .btn{ padding:11px 14px; font-size:13.5px; }
-    .stage-chips{ display:none; } /* keep mobile UI uncluttered; dots + buttons suffice */
+    .stage-chips{ display:none; }
   }
 
   @media (prefers-reduced-motion: reduce){
-    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+    * { animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
   }
 
-  /* simple fade utility used by JS when swapping captions */
   .fade-out{ opacity:0; }
 </style>
 </head>
@@ -322,68 +339,83 @@
 <div class="app">
 
   <header class="top">
-    <h1>🔬 Cell Division — How One Cell Becomes Two</h1>
-    <p class="sub">An interactive walk-through of mitosis for Class 9 Biology</p>
+    <h1 id="mainTitle">🔬 Cell Division — How One Cell Becomes Two</h1>
+    <p class="sub">An interactive walk-through of cell replication layouts for Class 9 Biology</p>
   </header>
 
+  <div class="mode-select-bar">
+    <button class="btn toggle-mode active-mode" id="mitosisModeBtn">Mitosis (Body Cells)</button>
+    <button class="btn toggle-mode" id="meiosisModeBtn">Meiosis (Sex Cells)</button>
+  </div>
+
   <div class="stage-frame">
-
     <div class="progress-row" id="progressRow" aria-label="Stage progress"></div>
-
 
     <div class="canvas-wrap">
       <svg id="cellSvg" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg">
-     
         <circle cx="300" cy="220" r="190" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.5"></circle>
 
-  
         <g id="parentGroup">
           <circle id="parentMembrane" cx="300" cy="220" r="100" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
           <circle id="parentNucleus" cx="300" cy="220" r="46" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="3"></circle>
-          
-          
           <g id="parentChromos" opacity="0"></g>
         </g>
 
-
         <g id="divideGroup" opacity="0">
           <ellipse id="divideMembrane" cx="300" cy="220" rx="160" ry="100" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></ellipse>
-         
           <g id="spindleLines" stroke="var(--spindle)" stroke-width="2" opacity="0.55"></g>
           <line id="equatorLine" x1="300" y1="120" x2="300" y2="320" stroke="var(--spindle)" stroke-width="2" stroke-dasharray="6 6" opacity="0.7"></line>
           <g id="movingChromos"></g>
         </g>
 
-      
-        
         <g id="daughterGroup" opacity="0">
           <g id="daughterLeft">
-            <circle cx="220" cy="220" r="86" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
-            <circle cx="220" cy="220" r="40" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="3"></circle>
+            <circle id="dLeftMembrane" cx="220" cy="220" r="86" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
+            <circle id="dLeftNucleus" cx="220" cy="220" r="40" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="3"></circle>
+            <g id="leftSpindles" stroke="var(--spindle)" stroke-width="1.5" opacity="0"></g>
             <g id="leftChromos"></g>
           </g>
           <g id="daughterRight">
-            <circle cx="380" cy="220" r="86" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
-            <circle cx="380" cy="220" r="40" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="3"></circle>
+            <circle id="dRightMembrane" cx="380" cy="220" r="86" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
+            <circle id="dRightNucleus" cx="380" cy="220" r="40" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="3"></circle>
+            <g id="rightSpindles" stroke="var(--spindle)" stroke-width="1.5" opacity="0"></g>
             <g id="rightChromos"></g>
           </g>
         </g>
 
-   
-        
-        <g id="growthSparkles" opacity="0"></g>
+        <g id="quadGroup" opacity="0">
+          <g transform="translate(190, 140)">
+            <circle cx="0" cy="0" r="62" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="4"></circle>
+            <circle cx="0" cy="0" r="28" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="2"></circle>
+            <g id="quadChromos1"></g>
+          </g>
+          <g transform="translate(190, 290)">
+            <circle cx="0" cy="0" r="62" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="4"></circle>
+            <circle cx="0" cy="0" r="28" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="2"></circle>
+            <g id="quadChromos2"></g>
+          </g>
+          <g transform="translate(410, 140)">
+            <circle cx="0" cy="0" r="62" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="4"></circle>
+            <circle cx="0" cy="0" r="28" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="2"></circle>
+            <g id="quadChromos3"></g>
+          </g>
+          <g transform="translate(410, 290)">
+            <circle cx="0" cy="0" r="62" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="4"></circle>
+            <circle cx="0" cy="0" r="28" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="2"></circle>
+            <g id="quadChromos4"></g>
+          </g>
+        </g>
 
+        <g id="growthSparkles" opacity="0"></g>
       </svg>
     </div>
 
- 
     <div class="stage-info">
       <h2 class="stage-name" id="stageName">Resting Cell</h2>
       <p class="stage-desc" id="stageDesc">This is a normal living cell, not yet dividing.</p>
       <div class="stage-counter" id="stageCounter">Stage 1 of 7</div>
     </div>
   </div>
-
 
   <div class="controls">
     <div class="controls-row">
@@ -413,56 +445,42 @@
   </div>
 
   <div class="stage-chips" id="stageChips"></div>
-
   <footer class="note">Tap any dot or chip to jump straight to that stage. Built for classroom projectors and mobile revision alike.</footer>
-
 </div>
 
 <script>
-
-
 (function(){
   "use strict";
 
- 
-  const stages = [
-    {
-      name: "Resting Cell",
-      desc: "This is a normal living cell, with its nucleus clearly visible inside the cytoplasm."
-    },
-    {
-      name: "Growth & Preparation",
-      desc: "Before dividing, the cell grows in size and stores up energy and material it will need."
-    },
-    {
-      name: "Chromosomes Appear",
-      desc: "Thread-like chromosomes form inside the nucleus and become thick and visible."
-    },
-    {
-      name: "Chromosome Alignment",
-      desc: "The nuclear membrane breaks down and chromosomes line up along the middle of the cell."
-    },
-    {
-      name: "Chromosome Separation",
-      desc: "The paired chromosome strands are pulled apart and move to opposite ends of the cell."
-    },
-    {
-      name: "Formation of Daughter Cells",
-      desc: "The cytoplasm pinches inward at the centre, splitting the cell into two new cells."
-    },
-    {
-      name: "Two Daughter Cells",
-      desc: "Division is complete — two smaller cells now exist, each identical to the original parent cell."
-    }
+  // Mode Data Sets
+  const mitosisStages = [
+    { name: "Resting Cell (Interphase)", desc: "This is a normal living cell executing everyday biological work. Its DNA is loosely arranged inside the nucleus." },
+    { name: "Growth & Preparation", desc: "Before dividing, the cell grows in size and duplicates its internal genetic material to ensure a complete copy is available." },
+    { name: "Chromosomes Appear", desc: "Thread-like chromosomes form inside the protective nucleus, condensing to become thick, clearly defined, and visible structures." },
+    { name: "Chromosome Alignment", desc: "The nuclear membrane dissolves completely. The chromosomes line up single-file along the direct middle equator line of the cell." },
+    { name: "Chromosome Separation", desc: "The paired sister chromatid arms are pulled directly apart by the contracting spindle fibers, moving toward opposite poles." },
+    { name: "Formation of Daughter Cells", desc: "The cytoplasm pinches deeply inward at the equator line, splitting the cell material into two cleanly organized internal halves." },
+    { name: "Two Identical Daughter Cells", desc: "Division is fully complete. Two distinct, separate cells now exist—each visually and genetically identical to the original parent cell." }
   ];
 
-  const TOTAL = stages.length;
+  const meiosisStages = [
+    { name: "Resting Cell (Interphase)", desc: "A specialized reproductive cell prepares for division. It replicates its internal DNA strands exactly like a mitotic cell." },
+    { name: "Homologous Pairing & Crossover", desc: "Similar chromosomes pair together side-by-side. They cross over and trade physical pieces of DNA, generating a brand-new unique mix." },
+    { name: "Meiosis I Alignment", desc: "The modified chromosome pairs align double-file along the equator line, anchored securely by fine spindle fiber tracts." },
+    { name: "First Cell Separation", desc: "Whole chromosome pairs pull apart to opposite ends of the cell. The individual sister arms remain bonded tightly together." },
+    { name: "First Division Complete", desc: "The cytoplasm pinches inward to form two temporary daughter cells. Each cell contains exactly half the original chromosome number." },
+    { name: "Meiosis II Separation", desc: "In both intermediate cells, chromosomes line up along the new midlines. This time, individual sister arm strands are pulled completely apart." },
+    { name: "Four Unique Gamete Cells", desc: "The cells split once more to produce four separate gamete cells (sperm/egg). Each cell possesses a unique, distinct genetic combination with half the DNA count." }
+  ];
+
+  let currentMode = 'mitosis'; // 'mitosis' or 'meiosis'
+  let stages = mitosisStages;
+  let TOTAL = stages.length;
   let current = 0;
   let isPlaying = false;
   let autoTimer = null;
   let animTimer = null;
 
-  
   const svgNS = "http://www.w3.org/2000/svg";
 
   function el(tag, attrs){
@@ -471,44 +489,42 @@
     return e;
   }
 
- 
-  function makeChromosome(cx, cy, color, colorDark, scale, rotation){
-    scale = scale || 1;
-    rotation = rotation || 0;
-    const g = el("g", {
-      transform: `translate(${cx},${cy}) rotate(${rotation}) scale(${scale})`
+  // Chromosome drawing factory with dynamic support for crossover color mutations
+  function makeChromosome(cx, cy, color, colorDark, scale=1, rotation=0, crossed=false){
+    const g = el("g", { transform: `translate(${cx},${cy}) rotate(${rotation}) scale(${scale})` });
+    const arm = (x1,y1,x2,y2, strokeColor) => el("line", {
+      x1, y1, x2, y2, stroke: strokeColor, "stroke-width": 4.2, "stroke-linecap":"round"
     });
-    const arm = (x1,y1,x2,y2) => el("line", {
-      x1, y1, x2, y2,
-      stroke: colorDark, "stroke-width": 4.2, "stroke-linecap":"round"
-    });
-    g.appendChild(arm(-7,-12, -1,0));
-    g.appendChild(arm(7,-12, 1,0));
-    g.appendChild(arm(-7,12, -1,0));
-    g.appendChild(arm(7,12, 1,0));
+
+    // Mix standard and crossover color highlights
+    const upperLeftColor  = crossed ? 'var(--chromo-crossover)' : colorDark;
+    const lowerRightColor = crossed ? 'var(--chromo-crossover)' : colorDark;
+
+    g.appendChild(arm(-7,-12, -1,0, upperLeftColor));
+    g.appendChild(arm(7,-12, 1,0, colorDark));
+    g.appendChild(arm(-7,12, -1,0, colorDark));
+    g.appendChild(arm(7,12, 1,0, lowerRightColor));
+
     const core = el("circle", { cx:0, cy:0, r:5, fill: color, stroke: colorDark, "stroke-width":2 });
     g.appendChild(core);
     return g;
   }
 
-  // Single-strand (separated) chromosome — simpler line shape, used after separation
-  function makeSingleChromosome(cx, cy, color, colorDark, scale, rotation){
-    scale = scale || 1;
-    rotation = rotation || 0;
-    const g = el("g", {
-      transform: `translate(${cx},${cy}) rotate(${rotation}) scale(${scale})`
-    });
-    g.appendChild(el("line", { x1:-9, y1:-11, x2:9, y2:11, stroke: colorDark, "stroke-width": 4.2, "stroke-linecap":"round" }));
+  function makeSingleChromosome(cx, cy, color, colorDark, scale=1, rotation=0, crossed=false){
+    const g = el("g", { transform: `translate(${cx},${cy}) rotate(${rotation}) scale(${scale})` });
+    const cColor = crossed ? 'var(--chromo-crossover)' : colorDark;
+    
+    g.appendChild(el("line", { x1:-9, y1:-11, x2:9, y2:11, stroke: cColor, "stroke-width": 4.2, "stroke-linecap":"round" }));
     g.appendChild(el("line", { x1:9, y1:-11, x2:-9, y2:11, stroke: colorDark, "stroke-width": 4.2, "stroke-linecap":"round" }));
     g.appendChild(el("circle", { cx:0, cy:0, r:4.5, fill: color, stroke: colorDark, "stroke-width":1.8 }));
     return g;
   }
 
   function clearChildren(node){
-    while(node.firstChild){ node.removeChild(node.firstChild); }
+    while(node && node.firstChild){ node.removeChild(node.firstChild); }
   }
 
-  /* ---------------- DOM refs ---------------- */
+  /* DOM Target References */
   const parentGroup    = document.getElementById('parentGroup');
   const parentMembrane = document.getElementById('parentMembrane');
   const parentNucleus  = document.getElementById('parentNucleus');
@@ -522,39 +538,61 @@
   const movingChromos  = document.getElementById('movingChromos');
 
   const daughterGroup  = document.getElementById('daughterGroup');
+  const dLeftMembrane  = document.getElementById('dLeftMembrane');
+  const dRightMembrane = document.getElementById('dRightMembrane');
+  const dLeftNucleus   = document.getElementById('dLeftNucleus');
+  const dRightNucleus  = document.getElementById('dRightNucleus');
+  const leftSpindles   = document.getElementById('leftSpindles');
+  const rightSpindles  = document.getElementById('rightSpindles');
   const leftChromos    = document.getElementById('leftChromos');
   const rightChromos   = document.getElementById('rightChromos');
 
-  const stageNameEl = document.getElementById('stageName');
-  const stageDescEl = document.getElementById('stageDesc');
+  const quadGroup      = document.getElementById('quadGroup');
+  const quadChromos1   = document.getElementById('quadChromos1');
+  const quadChromos2   = document.getElementById('quadChromos2');
+  const quadChromos3   = document.getElementById('quadChromos3');
+  const quadChromos4   = document.getElementById('quadChromos4');
+
+  const stageNameEl    = document.getElementById('stageName');
+  const stageDescEl    = document.getElementById('stageDesc');
   const stageCounterEl = document.getElementById('stageCounter');
-  const progressRow = document.getElementById('progressRow');
-  const stageChips  = document.getElementById('stageChips');
+  const progressRow    = document.getElementById('progressRow');
+  const stageChips     = document.getElementById('stageChips');
 
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const playPauseBtn = document.getElementById('playPauseBtn');
-  const playIcon = document.getElementById('playIcon');
-  const playLabel = document.getElementById('playLabel');
-  const restartBtn = document.getElementById('restartBtn');
-  const speedSelect = document.getElementById('speedSelect');
+  const prevBtn        = document.getElementById('prevBtn');
+  const nextBtn        = document.getElementById('nextBtn');
+  const playPauseBtn   = document.getElementById('playPauseBtn');
+  const playIcon       = document.getElementById('playIcon');
+  const playLabel      = document.getElementById('playLabel');
+  const restartBtn     = document.getElementById('restartBtn');
+  const speedSelect    = document.getElementById('speedSelect');
+  
+  const mitosisModeBtn = document.getElementById('mitosisModeBtn');
+  const meiosisModeBtn = document.getElementById('meiosisModeBtn');
+  const mainTitle      = document.getElementById('mainTitle');
 
-  /* ---------------- build progress dots + chips once ---------------- */
-  stages.forEach((s, i) => {
-    const dot = document.createElement('button');
-    dot.className = 'dot';
-    dot.setAttribute('aria-label', 'Go to stage ' + (i+1) + ': ' + s.name);
-    dot.addEventListener('click', () => jumpTo(i));
-    progressRow.appendChild(dot);
+  /* Build Progress Infrastructure dynamically based on chosen process length */
+  function rebuildProgressUI(){
+    clearChildren(progressRow);
+    clearChildren(stageChips);
+    
+    stages.forEach((s, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'dot';
+      dot.setAttribute('aria-label', 'Go to stage ' + (i+1) + ': ' + s.name);
+      dot.addEventListener('click', () => jumpTo(i));
+      progressRow.appendChild(dot);
 
-    const chip = document.createElement('button');
-    chip.className = 'chip';
-    chip.textContent = (i+1) + '. ' + s.name;
-    chip.addEventListener('click', () => jumpTo(i));
-    stageChips.appendChild(chip);
-  });
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.textContent = (i+1) + '. ' + s.name;
+      chip.addEventListener('click', () => jumpTo(i));
+      stageChips.appendChild(chip);
+    });
+    refreshProgressTracker();
+  }
 
-  function refreshProgressUI(){
+  function refreshProgressTracker(){
     const dots = progressRow.querySelectorAll('.dot');
     const chips = stageChips.querySelectorAll('.chip');
     dots.forEach((d,i) => {
@@ -567,18 +605,24 @@
     nextBtn.disabled = (current === TOTAL - 1);
   }
 
-  /* ---------------- C. STAGE RENDERER ---------------- */
-  // Resets all dynamic groups to a known baseline before drawing a stage.
   function resetVisualGroups(){
     if(animTimer){ clearTimeout(animTimer); animTimer = null; }
 
     parentGroup.style.opacity = 0;
     divideGroup.style.opacity = 0;
     daughterGroup.style.opacity = 0;
+    quadGroup.style.opacity = 0;
     growthSparkles.style.opacity = 0;
+    leftSpindles.style.opacity = 0;
+    rightSpindles.style.opacity = 0;
 
     parentMembrane.setAttribute('r', 100);
     parentNucleus.setAttribute('r', 46);
+    dLeftMembrane.setAttribute('r', 86);
+    dRightMembrane.setAttribute('r', 86);
+    dLeftNucleus.setAttribute('r', 40);
+    dRightNucleus.setAttribute('r', 40);
+
     parentChromos.style.opacity = 0;
     clearChildren(parentChromos);
     clearChildren(growthSparkles);
@@ -586,45 +630,55 @@
     clearChildren(movingChromos);
     clearChildren(leftChromos);
     clearChildren(rightChromos);
+    clearChildren(leftSpindles);
+    clearChildren(rightSpindles);
+    
+    clearChildren(quadChromos1);
+    clearChildren(quadChromos2);
+    clearChildren(quadChromos3);
+    clearChildren(quadChromos4);
+
     equatorLine.style.opacity = 0;
     divideMembrane.setAttribute('rx', 160);
     divideMembrane.setAttribute('ry', 100);
   }
 
-  // chromosome pair colors used consistently across all stages
   const PAIR_COLORS = [
     { c: 'var(--chromo-a)', d: 'var(--chromo-a-dark)' },
     { c: 'var(--chromo-b)', d: 'var(--chromo-b-dark)' }
   ];
 
+  /* Comprehensive Dynamic Rendering Pipeline */
   function renderStage(index){
     resetVisualGroups();
-    const fade = 450; // ms used for CSS opacity transitions on groups
+    const fade = 450;
 
-    [parentGroup, divideGroup, daughterGroup, growthSparkles, parentChromos].forEach(g=>{
+    [parentGroup, divideGroup, daughterGroup, quadGroup, growthSparkles, parentChromos].forEach(g=>{
       g.style.transition = `opacity ${fade}ms ease`;
     });
 
-    switch(index){
+    if (currentMode === 'mitosis') {
+      executeMitosisRender(index);
+    } else {
+      executeMeiosisRender(index);
+    }
+  }
 
-      /* ---- 0: Resting cell ---- */
-      case 0: {
+  /* Mitosis Graphic Layout Track */
+  function executeMitosisRender(index) {
+    switch(index){
+      case 0:
         parentGroup.style.opacity = 1;
         break;
-      }
-
-      /* ---- 1: Growth & preparation ---- */
-      case 1: {
+      case 1:
         parentGroup.style.opacity = 1;
         growthSparkles.style.opacity = 1;
-        // animate membrane + nucleus growing slightly larger
         parentMembrane.style.transition = 'r 1400ms ease';
         parentNucleus.style.transition = 'r 1400ms ease';
         requestAnimationFrame(()=>{
           parentMembrane.setAttribute('r', 112);
           parentNucleus.setAttribute('r', 52);
         });
-        // sparkles representing energy/material build-up
         for(let i=0;i<8;i++){
           const angle = (Math.PI*2/8)*i;
           const r = 130 + (i%2===0 ? 8 : -4);
@@ -636,58 +690,34 @@
           requestAnimationFrame(()=> dot.style.opacity = 0.85);
         }
         break;
-      }
-
-      /* ---- 2: Chromosomes appear ---- */
-      case 2: {
+      case 2:
         parentGroup.style.opacity = 1;
         parentMembrane.setAttribute('r', 112);
         parentNucleus.setAttribute('r', 52);
-
-        const positions = [
-          {x:-16,y:-14, rot:20}, {x:16,y:-12, rot:-15},
-          {x:-14,y:14, rot:-25}, {x:15,y:15, rot:10}
-        ];
-        positions.forEach((p,i)=>{
+        const p2 = [{x:-16,y:-14, rot:20}, {x:16,y:-12, rot:-15}, {x:-14,y:14, rot:-25}, {x:15,y:15, rot:10}];
+        p2.forEach((p,i)=>{
           const colorSet = PAIR_COLORS[i % 2];
-          const chromo = makeChromosome(300+p.x, 220+p.y, colorSet.c, colorSet.d, 0.001, p.rot);
-          parentChromos.appendChild(chromo);
+          parentChromos.appendChild(makeChromosome(300+p.x, 220+p.y, colorSet.c, colorSet.d, 0.001, p.rot));
         });
         parentChromos.style.opacity = 1;
-        // pop the chromosomes in with a little scale grow
         requestAnimationFrame(()=>{
           Array.from(parentChromos.children).forEach((g, i)=>{
             g.style.transition = `transform 600ms cubic-bezier(.34,1.56,.64,1) ${i*90}ms`;
-            const p = positions[i];
-            g.setAttribute('transform', `translate(${300+p.x},${220+p.y}) rotate(${p.rot}) scale(1.4)`);
+            g.setAttribute('transform', `translate(${300+p2[i].x},${220+p2[i].y}) rotate(${p2[i].rot}) scale(1.4)`);
           });
         });
         break;
-      }
-
-      /* ---- 3: Alignment ---- */
-      case 3: {
+      case 3:
         divideGroup.style.opacity = 1;
-        divideMembrane.setAttribute('rx', 160);
-        divideMembrane.setAttribute('ry', 100);
-
-        // spindle guide fibres fanning from two poles toward the equator
-        const poles = [ {x:140,y:220}, {x:460,y:220} ];
-        poles.forEach(pole=>{
+        for(let pole of [{x:140,y:220}, {x:460,y:220}]){
           for(let i=-2;i<=2;i++){
-            const ty = 220 + i*32;
-            spindleLines.appendChild(el('line', {
-              x1: pole.x, y1: 220, x2: 300, y2: ty
-            }));
+            spindleLines.appendChild(el('line', { x1: pole.x, y1: 220, x2: 300, y2: 220 + i*32 }));
           }
-        });
-
+        }
         equatorLine.style.transition = 'opacity 500ms ease';
         requestAnimationFrame(()=> equatorLine.style.opacity = 0.7);
-
-        // four chromosomes lined up at the cell's equator (metaphase plate)
-        const yPositions = [-45,-15,15,45];
-        yPositions.forEach((y,i)=>{
+        const y3 = [-45,-15,15,45];
+        y3.forEach((y,i)=>{
           const colorSet = PAIR_COLORS[i % 2];
           const chromo = makeChromosome(300, 220+y, colorSet.c, colorSet.d, 0, 90);
           movingChromos.appendChild(chromo);
@@ -697,62 +727,39 @@
           });
         });
         break;
-      }
-
-      /* ---- 4: Separation ---- */
-      case 4: {
+      case 4:
         divideGroup.style.opacity = 1;
-        const poles = [ {x:140,y:220}, {x:460,y:220} ];
-        poles.forEach(pole=>{
+        for(let pole of [{x:140,y:220}, {x:460,y:220}]){
           for(let i=-2;i<=2;i++){
-            const ty = 220 + i*32;
-            spindleLines.appendChild(el('line', {
-              x1: pole.x, y1: 220, x2: 300, y2: ty
-            }));
+            spindleLines.appendChild(el('line', { x1: pole.x, y1: 220, x2: 300, y2: 220 + i*32 }));
           }
-        });
+        }
         equatorLine.style.opacity = 0.35;
-
-        const yPositions = [-45,-15,15,45];
-        // start them at the equator (single chromatid look), then pull apart to poles
-        yPositions.forEach((y,i)=>{
+        const y4 = [-45,-15,15,45];
+        y4.forEach((y,i)=>{
           const colorSet = PAIR_COLORS[i % 2];
-          const startX = 300;
-          const chromo = makeSingleChromosome(startX, 220+y, colorSet.c, colorSet.d, 1.3, 0);
-          movingChromos.appendChild(chromo);
+          movingChromos.appendChild(makeSingleChromosome(300, 220+y, colorSet.c, colorSet.d, 1.3, 0));
         });
         requestAnimationFrame(()=>{
           Array.from(movingChromos.children).forEach((g, i)=>{
-            const y = yPositions[i];
-            const targetX = (i < 2) ? 195 : 405; // two go left, two go right
+            const targetX = (i < 2) ? 195 : 405;
             g.style.transition = `transform 1100ms cubic-bezier(.45,.05,.55,.95)`;
-            g.setAttribute('transform', `translate(${targetX},${220+y}) scale(1.3)`);
+            g.setAttribute('transform', `translate(${targetX},${220+y4[i]}) scale(1.3)`);
           });
         });
         break;
-      }
-
-      /* ---- 5: Formation of daughter cells (cytoplasm splitting) ---- */
-      case 5: {
+      case 5:
         divideGroup.style.opacity = 1;
-        equatorLine.style.opacity = 0;
-        spindleLines.style.opacity = 0;
-
-        const yPositions = [-45,-15,15,45];
-        yPositions.forEach((y,i)=>{
+        const y5 = [-45,-15,15,45];
+        y5.forEach((y,i)=>{
           const colorSet = PAIR_COLORS[i % 2];
-          const targetX = (i < 2) ? 195 : 405;
-          const chromo = makeSingleChromosome(targetX, 220+y, colorSet.c, colorSet.d, 1.3, 0);
-          movingChromos.appendChild(chromo);
+          movingChromos.appendChild(makeSingleChromosome((i<2?195:405), 220+y, colorSet.c, colorSet.d, 1.3, 0));
         });
-
-        // animate the single ellipse pinching into a figure-eight / dumbbell via rx/ry shrink
         divideMembrane.style.transition = 'rx 1200ms ease, ry 1200ms ease';
         requestAnimationFrame(()=>{
           divideMembrane.setAttribute('rx', 95);
           divideMembrane.setAttribute('ry', 88);
         });
-        // a thin neck line suggesting the pinch — drawn as two opposing crescents using stroke trick
         const neckTop = el('line', { x1:300, y1:140, x2:300, y2:300, stroke:'var(--cell-wall)', 'stroke-width':0, opacity:0 });
         divideGroup.insertBefore(neckTop, spindleLines);
         neckTop.style.transition = 'stroke-width 1200ms ease, opacity 600ms ease';
@@ -761,34 +768,150 @@
           neckTop.style.opacity = 0.9;
         });
         break;
-      }
-
-      /* ---- 6: Two daughter cells complete ---- */
-      case 6: {
+      case 6:
         daughterGroup.style.opacity = 1;
-        const yPositions = [-30,30];
-        // left daughter cell chromosomes (2 single chromatids)
-        yPositions.forEach((y,i)=>{
-          const colorSet = PAIR_COLORS[i % 2];
-          leftChromos.appendChild(makeSingleChromosome(220, 220+y, colorSet.c, colorSet.d, 1.1, 0));
-          rightChromos.appendChild(makeSingleChromosome(380, 220+y, colorSet.c, colorSet.d, 1.1, 0));
+        [-30,30].forEach((y,i)=>{
+          leftChromos.appendChild(makeSingleChromosome(220, 220+y, PAIR_COLORS[i%2].c, PAIR_COLORS[i%2].d, 1.1, 0));
+          rightChromos.appendChild(makeSingleChromosome(380, 220+y, PAIR_COLORS[i%2].c, PAIR_COLORS[i%2].d, 1.1, 0));
         });
-        // gentle pop-in
-        [daughterGroup].forEach(g=>{
-          g.style.transform = 'scale(0.92)';
-          g.style.transformOrigin = '300px 220px';
-          g.style.transition = 'opacity 500ms ease, transform 600ms cubic-bezier(.34,1.4,.64,1)';
-          requestAnimationFrame(()=>{
-            g.style.opacity = 1;
-            g.style.transform = 'scale(1)';
-          });
+        daughterGroup.style.transform = 'scale(0.92)';
+        daughterGroup.style.transformOrigin = '300px 220px';
+        daughterGroup.style.transition = 'opacity 500ms ease, transform 600ms cubic-bezier(.34,1.4,.64,1)';
+        requestAnimationFrame(()=>{
+          daughterGroup.style.transform = 'scale(1)';
         });
         break;
-      }
     }
   }
 
-  /* ---------------- text + UI update ---------------- */
+  /* Meiosis Graphic Layout Track */
+  function executeMeiosisRender(index) {
+    switch(index){
+      case 0: // Interphase
+        parentGroup.style.opacity = 1;
+        break;
+
+      case 1: // Prophase I - Homologous pairing + physical crossover indicators
+        parentGroup.style.opacity = 1;
+        parentMembrane.setAttribute('r', 112);
+        parentNucleus.setAttribute('r', 52);
+        parentChromos.style.opacity = 1;
+        
+        // Render homologous chromosome bundles touching side-by-side
+        const pairs = [
+          {x:-22, y:-12, rot:15, c:PAIR_COLORS[0], cross:false},
+          {x:-10, y:-10, rot:25, c:PAIR_COLORS[0], cross:true},
+          {x:10,  y:14,  rot:-20, c:PAIR_COLORS[1], cross:true},
+          {x:22,  y:16,  rot:-10, c:PAIR_COLORS[1], cross:false}
+        ];
+        pairs.forEach((p)=>{
+          parentChromos.appendChild(makeChromosome(300+p.x, 220+p.y, p.c.c, p.c.d, 1.2, p.rot, p.cross));
+        });
+        break;
+
+      case 2: // Metaphase I Alignment (Double-file config)
+        divideGroup.style.opacity = 1;
+        for(let pole of [{x:140,y:220}, {x:460,y:220}]){
+          for(let i=-2;i<=2;i++){
+            spindleLines.appendChild(el('line', { x1: pole.x, y1: 220, x2: 300 + (pole.x<300 ? -15 : 15), y2: 220 + i*32 }));
+          }
+        }
+        equatorLine.style.opacity = 0.7;
+        
+        // Double row setup along the equator line
+        const metaI = [
+          {x: 284, y: 180, rot: 90, c: PAIR_COLORS[0], cross: false},
+          {x: 316, y: 180, rot: 90, c: PAIR_COLORS[0], cross: true},
+          {x: 284, y: 260, rot: 90, c: PAIR_COLORS[1], cross: true},
+          {x: 316, y: 260, rot: 90, c: PAIR_COLORS[1], cross: false}
+        ];
+        metaI.forEach(p => {
+          movingChromos.appendChild(makeChromosome(p.x, p.y, p.c.c, p.c.d, 1.2, p.rot, p.cross));
+        });
+        break;
+
+      case 3: // Anaphase I Separation (Whole chromosomes separate intact)
+        divideGroup.style.opacity = 1;
+        equatorLine.style.opacity = 0.3;
+        for(let pole of [{x:140,y:220}, {x:460,y:220}]){
+          for(let i=-2;i<=2;i++){ spindleLines.appendChild(el('line', { x1: pole.x, y1: 220, x2: 300, y2: 220 + i*32 })); }
+        }
+
+        const anaphaseI = [
+          {startX: 284, targetX: 195, y: 185, c: PAIR_COLORS[0], cross: false},
+          {startX: 316, targetX: 405, y: 185, c: PAIR_COLORS[0], cross: true},
+          {startX: 284, targetX: 195, y: 255, c: PAIR_COLORS[1], cross: true},
+          {startX: 316, targetX: 405, y: 255, c: PAIR_COLORS[1], cross: false}
+        ];
+        anaphaseI.forEach(p => {
+          movingChromos.appendChild(makeChromosome(p.startX, p.y, p.c.c, p.c.d, 1.2, 90, p.cross));
+        });
+        requestAnimationFrame(()=>{
+          Array.from(movingChromos.children).forEach((g, i)=>{
+            g.style.transition = `transform 1100ms ease-in-out`;
+            g.setAttribute('transform', `translate(${anaphaseI[i].targetX}, ${anaphaseI[i].y}) rotate(90) scale(1.2)`);
+          });
+        });
+        break;
+
+      case 4: // Telophase I Complete
+        daughterGroup.style.opacity = 1;
+        dLeftNucleus.setAttribute('r', 40);
+        dRightNucleus.setAttribute('r', 40);
+        
+        // Add chromosomes inside intermediate cells
+        leftChromos.appendChild(makeChromosome(220, 190, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1.1, 30, false));
+        leftChromos.appendChild(makeChromosome(220, 250, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1.1, -20, true));
+        
+        rightChromos.appendChild(makeChromosome(380, 190, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1.1, -10, true));
+        rightChromos.appendChild(makeChromosome(380, 250, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1.1, 40, false));
+        break;
+
+      case 5: // Meiosis II Midline Alignment & Separation
+        daughterGroup.style.opacity = 1;
+        dLeftNucleus.setAttribute('r', 0); // Nuclei dissolve again
+        dRightNucleus.setAttribute('r', 0);
+        leftSpindles.style.opacity = 0.6;
+        rightSpindles.style.opacity = 0.6;
+
+        // Draw internal miniature spindle tracks inside both cells
+        for(let i=-1; i<=1; i++) {
+          leftSpindles.appendChild(el('line', { x1: 220, y1: 140, x2: 220, y2: 300, stroke: 'var(--spindle)', 'stroke-dasharray': '3 3' }));
+          rightSpindles.appendChild(el('line', { x1: 380, y1: 140, x2: 380, y2: 300, stroke: 'var(--spindle)', 'stroke-dasharray': '3 3' }));
+        }
+
+        // Show single chromatid arm pull actions
+        leftChromos.appendChild(makeSingleChromosome(180, 190, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1.1, 0, false));
+        leftChromos.appendChild(makeSingleChromosome(260, 190, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1.1, 180, false));
+        leftChromos.appendChild(makeSingleChromosome(180, 250, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1.1, 0, true));
+        leftChromos.appendChild(makeSingleChromosome(260, 250, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1.1, 180, true));
+
+        rightChromos.appendChild(makeSingleChromosome(340, 190, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1.1, 0, true));
+        rightChromos.appendChild(makeSingleChromosome(420, 190, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1.1, 180, true));
+        rightChromos.appendChild(makeSingleChromosome(340, 250, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1.1, 0, false));
+        rightChromos.appendChild(makeSingleChromosome(420, 250, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1.1, 180, false));
+        break;
+
+      case 6: // Final 4 Haploid Gametes
+        quadGroup.style.opacity = 1;
+        
+        // Populate individual mixed single chromatid sets into each independent micro-cell container
+        quadChromos1.appendChild(makeSingleChromosome(-12, -10, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1, 15, false));
+        quadChromos1.appendChild(makeSingleChromosome(12, 10, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1, -30, true));
+
+        quadChromos2.appendChild(makeSingleChromosome(-10, -12, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1, 45, false));
+        quadChromos2.appendChild(makeSingleChromosome(10, 12, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1, 10, true));
+
+        quadChromos3.appendChild(makeSingleChromosome(-12, -10, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1, -15, true));
+        quadChromos3.appendChild(makeSingleChromosome(12, 10, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1, 20, false));
+
+        quadChromos4.appendChild(makeSingleChromosome(-10, -12, PAIR_COLORS[0].c, PAIR_COLORS[0].d, 1, -40, true));
+        quadChromos4.appendChild(makeSingleChromosome(10, 12, PAIR_COLORS[1].c, PAIR_COLORS[1].d, 1, -5, false));
+        break;
+    }
+  }
+
+  /* UI Sync Updates */
   function renderText(index){
     stageNameEl.classList.add('fade-out');
     stageDescEl.classList.add('fade-out');
@@ -804,16 +927,13 @@
     current = Math.max(0, Math.min(TOTAL - 1, index));
     renderStage(current);
     renderText(current);
-    refreshProgressUI();
+    refreshProgressTracker();
   }
 
-  /* ---------------- D. NAVIGATION CONTROLLER ---------------- */
+  /* Engine Controls Flow */
   function next(){
-    if(current < TOTAL - 1){
-      goToStage(current + 1);
-    } else {
-      stopAutoplay(); // reached the end naturally
-    }
+    if(current < TOTAL - 1){ goToStage(current + 1); } 
+    else { stopAutoplay(); }
   }
   function prev(){
     if(current > 0){ goToStage(current - 1); }
@@ -827,7 +947,6 @@
     goToStage(0);
   }
 
-  /* ---------------- E. AUTOPLAY ENGINE ---------------- */
   function startAutoplay(){
     isPlaying = true;
     playIcon.textContent = '⏸';
@@ -853,7 +972,34 @@
     }, delay);
   }
 
-  /* ---------------- F. UI WIRING ---------------- */
+  /* Switch Mode Execution (Mitosis <-> Meiosis) */
+  function switchMode(mode) {
+    if (currentMode === mode) return;
+    stopAutoplay();
+    currentMode = mode;
+    
+    if(mode === 'mitosis') {
+      stages = mitosisStages;
+      mitosisModeBtn.classList.add('active-mode');
+      meiosisModeBtn.classList.remove('active-mode');
+      mainTitle.textContent = "🔬 Cell Division — How One Cell Becomes Two";
+      document.documentElement.style.setProperty('--accent', '#1f8a6c');
+      document.documentElement.style.setProperty('--accent-dark', '#166b53');
+    } else {
+      stages = meiosisStages;
+      meiosisModeBtn.classList.add('active-mode');
+      mitosisModeBtn.classList.remove('active-mode');
+      mainTitle.textContent = "🧬 Meiosis Division — Producing Gametes";
+      document.documentElement.style.setProperty('--accent', 'var(--meiosis-accent)');
+      document.documentElement.style.setProperty('--accent-dark', 'var(--meiosis-dark)');
+    }
+    
+    TOTAL = stages.length;
+    rebuildProgressUI();
+    goToStage(0);
+  }
+
+  /* Interface Event Listeners Wiring */
   prevBtn.addEventListener('click', ()=>{ stopAutoplay(); prev(); });
   nextBtn.addEventListener('click', ()=>{ stopAutoplay(); next(); });
   restartBtn.addEventListener('click', restart);
@@ -861,23 +1007,26 @@
   playPauseBtn.addEventListener('click', ()=>{
     if(isPlaying){ stopAutoplay(); }
     else {
-      if(current === TOTAL - 1){ goToStage(0); } // restart loop if already at end
+      if(current === TOTAL - 1){ goToStage(0); }
       startAutoplay();
     }
   });
 
   speedSelect.addEventListener('change', ()=>{
-    if(isPlaying){ scheduleNext(); } // re-schedule with new speed immediately
+    if(isPlaying){ scheduleNext(); }
   });
 
-  // keyboard support for desktop
+  mitosisModeBtn.addEventListener('click', () => switchMode('mitosis'));
+  meiosisModeBtn.addEventListener('click', () => switchMode('meiosis'));
+
+  // Keyboard desktop shortcuts
   document.addEventListener('keydown', (e)=>{
     if(e.key === 'ArrowRight'){ stopAutoplay(); next(); }
     else if(e.key === 'ArrowLeft'){ stopAutoplay(); prev(); }
     else if(e.code === 'Space'){ e.preventDefault(); playPauseBtn.click(); }
   });
 
-  // basic swipe support for mobile touch on the canvas
+  // Mobile swipe layout mechanics
   (function enableSwipe(){
     const target = document.querySelector('.canvas-wrap');
     let touchStartX = null;
@@ -895,7 +1044,8 @@
     }, {passive:true});
   })();
 
-  /* ---------------- INITIAL RENDER ---------------- */
+  /* Runtime Boot Initialization */
+  rebuildProgressUI();
   goToStage(0);
 
 })();
