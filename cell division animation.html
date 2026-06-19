@@ -6,9 +6,7 @@
 <title>Cell Division (Mitosis) — Interactive Animation | Class 9 Biology By - Aarush Maharana </title>
 
 <style>
-  /* ============================================================
-     1. DESIGN TOKENS — color palette, type scale, spacing
-     ============================================================ */
+  
   :root{
     --bg-1:#eef6f3;
     --bg-2:#e7f2ff;
@@ -58,9 +56,7 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* ============================================================
-     2. LAYOUT SHELL
-     ============================================================ */
+  
   .app{
     min-height:100vh;
     display:flex;
@@ -99,7 +95,7 @@
     margin-top:14px;
   }
 
-  /* progress bar of dots */
+
   .progress-row{
     display:flex;
     align-items:center;
@@ -128,7 +124,7 @@
     border-color:var(--accent);
   }
 
-  /* the canvas where the cell lives */
+
   .canvas-wrap{
     position:relative;
     width:100%;
@@ -147,7 +143,7 @@
     display:block;
   }
 
-  /* stage label + caption */
+
   .stage-info{
     text-align:center;
     padding:6px 22px 18px;
@@ -176,9 +172,7 @@
     opacity:0.75;
   }
 
-  /* ============================================================
-     3. CONTROLS
-     ============================================================ */
+
   .controls{
     width:100%;
     max-width:980px;
@@ -268,7 +262,7 @@
     cursor:pointer;
   }
 
-  /* stage chips - quick jump list, visible on wider screens */
+
   .stage-chips{
     width:100%;
     max-width:980px;
@@ -307,9 +301,7 @@
     padding:0 10px;
   }
 
-  /* ============================================================
-     4. RESPONSIVE TWEAKS
-     ============================================================ */
+
   @media (max-width:600px){
     .canvas-wrap{ aspect-ratio: 4/5; max-height:54vh; }
     .btn{ padding:11px 14px; font-size:13.5px; }
@@ -335,35 +327,34 @@
 
   <div class="stage-frame">
 
-    <!-- progress dots -->
     <div class="progress-row" id="progressRow" aria-label="Stage progress"></div>
 
-    <!-- main animation canvas -->
+
     <div class="canvas-wrap">
       <svg id="cellSvg" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg">
-        <!-- All animated shapes are injected / controlled by JavaScript below -->
-
-        <!-- soft background ring -->
+     
         <circle cx="300" cy="220" r="190" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.5"></circle>
 
-        <!-- ===== SINGLE PARENT CELL GROUP (stages 0-2) ===== -->
+  
         <g id="parentGroup">
           <circle id="parentMembrane" cx="300" cy="220" r="100" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
           <circle id="parentNucleus" cx="300" cy="220" r="46" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="3"></circle>
-          <!-- chromosomes inside parent nucleus, appear in stage 2 -->
+          
+          
           <g id="parentChromos" opacity="0"></g>
         </g>
 
-        <!-- ===== ALIGNMENT / SEPARATION GROUP (stages 3-4) ===== -->
+
         <g id="divideGroup" opacity="0">
           <ellipse id="divideMembrane" cx="300" cy="220" rx="160" ry="100" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></ellipse>
-          <!-- spindle fibre guide lines -->
+         
           <g id="spindleLines" stroke="var(--spindle)" stroke-width="2" opacity="0.55"></g>
           <line id="equatorLine" x1="300" y1="120" x2="300" y2="320" stroke="var(--spindle)" stroke-width="2" stroke-dasharray="6 6" opacity="0.7"></line>
           <g id="movingChromos"></g>
         </g>
 
-        <!-- ===== TWO DAUGHTER CELLS GROUP (stages 5-6) ===== -->
+      
+        
         <g id="daughterGroup" opacity="0">
           <g id="daughterLeft">
             <circle cx="220" cy="220" r="86" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
@@ -377,13 +368,14 @@
           </g>
         </g>
 
-        <!-- little floating sparkle dots for "growth" feel, stage 1 -->
+   
+        
         <g id="growthSparkles" opacity="0"></g>
 
       </svg>
     </div>
 
-    <!-- text info -->
+ 
     <div class="stage-info">
       <h2 class="stage-name" id="stageName">Resting Cell</h2>
       <p class="stage-desc" id="stageDesc">This is a normal living cell, not yet dividing.</p>
@@ -391,7 +383,7 @@
     </div>
   </div>
 
-  <!-- controls -->
+
   <div class="controls">
     <div class="controls-row">
       <button class="btn ghost" id="restartBtn" title="Restart">
@@ -419,7 +411,6 @@
     </div>
   </div>
 
-  <!-- quick-jump chips for desktop -->
   <div class="stage-chips" id="stageChips"></div>
 
   <footer class="note">Tap any dot or chip to jump straight to that stage. Built for classroom projectors and mobile revision alike.</footer>
@@ -427,22 +418,12 @@
 </div>
 
 <script>
-/* ================================================================
-   CELL DIVISION (MITOSIS) — ANIMATION ENGINE
-   ----------------------------------------------------------------
-   This script is organised into clear sections:
-     A. Stage data (names, descriptions, durations)
-     B. SVG helper builders (drawing chromosomes/sparkles dynamically)
-     C. Stage renderer (shows/hides/animates the right SVG groups)
-     D. Navigation controller (next/prev/jump/restart)
-     E. Autoplay engine (play/pause + timer)
-     F. UI wiring (buttons, dots, chips, keyboard, touch)
-   ================================================================ */
+
 
 (function(){
   "use strict";
 
-  /* ---------------- A. STAGE DATA ---------------- */
+ 
   const stages = [
     {
       name: "Resting Cell",
@@ -475,12 +456,12 @@
   ];
 
   const TOTAL = stages.length;
-  let current = 0;          // index of current stage
+  let current = 0;
   let isPlaying = false;
   let autoTimer = null;
-  let animTimer = null;     // guards in-flight per-stage animation timeouts
+  let animTimer = null;
 
-  /* ---------------- B. SVG HELPERS ---------------- */
+  
   const svgNS = "http://www.w3.org/2000/svg";
 
   function el(tag, attrs){
@@ -489,14 +470,13 @@
     return e;
   }
 
-  // Draw a simple "X" shaped chromosome (two crossed bars) at a position/scale/color
+ 
   function makeChromosome(cx, cy, color, colorDark, scale, rotation){
     scale = scale || 1;
     rotation = rotation || 0;
     const g = el("g", {
       transform: `translate(${cx},${cy}) rotate(${rotation}) scale(${scale})`
     });
-    // four little arms to suggest the classic X / chromatid shape
     const arm = (x1,y1,x2,y2) => el("line", {
       x1, y1, x2, y2,
       stroke: colorDark, "stroke-width": 4.2, "stroke-linecap":"round"
