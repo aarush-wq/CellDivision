@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Cell Division (Mitosis) — Interactive Animation | Class 9 Biology</title>
+
+<style>
+  /* ============================================================
+     1. DESIGN TOKENS — color palette, type scale, spacing
+     ============================================================ */
+  :root{
+    --bg-1:#eef6f3;
+    --bg-2:#e7f2ff;
+    --ink:#1f2d2a;
+    --ink-soft:#4d5e59;
+    --paper:#ffffff;
+    --line:#d7e6e1;
+
+    --cell-wall:#2f6f5e;
+    --cytoplasm:#cdeee2;
+    --cytoplasm-2:#bfe9da;
+    --nucleus:#a9d9ff;
+    --nucleus-edge:#5c9fd8;
+    --membrane-glow:#7fc9ae;
+
+    --chromo-a:#e8556a;
+    --chromo-a-dark:#c23a4d;
+    --chromo-b:#3f7fd9;
+    --chromo-b-dark:#2c5fae;
+    --spindle:#f4b942;
+
+    --accent:#1f8a6c;
+    --accent-dark:#166b53;
+    --accent-soft:#e3f5ed;
+    --warn:#d9772e;
+
+    --radius-lg:28px;
+    --radius-md:16px;
+    --radius-sm:10px;
+
+    --shadow-soft:0 8px 24px rgba(31,45,42,0.08);
+    --shadow-pop:0 14px 34px rgba(31,45,42,0.14);
+
+    --font-display:'Trebuchet MS','Segoe UI',-apple-system,sans-serif;
+    --font-body:'Segoe UI',-apple-system,Roboto,sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 10% 0%, var(--bg-2) 0%, transparent 45%),
+      radial-gradient(circle at 90% 100%, var(--bg-2) 0%, transparent 45%),
+      var(--bg-1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ============================================================
+     2. LAYOUT SHELL
+     ============================================================ */
+  .app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:18px 16px 28px;
+  }
+
+  header.top{
+    width:100%;
+    max-width:980px;
+    text-align:center;
+    margin-bottom:10px;
+  }
+  header.top h1{
+    font-family:var(--font-display);
+    font-size:clamp(22px,4vw,32px);
+    margin:0 0 4px;
+    color:var(--accent-dark);
+    letter-spacing:0.3px;
+  }
+  header.top p.sub{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:clamp(13px,2.2vw,15px);
+  }
+
+  .stage-frame{
+    width:100%;
+    max-width:980px;
+    background:var(--paper);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-pop);
+    border:1px solid var(--line);
+    overflow:hidden;
+    margin-top:14px;
+  }
+
+  /* progress bar of dots */
+  .progress-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:16px 14px 4px;
+    flex-wrap:wrap;
+  }
+  .dot{
+    width:11px; height:11px;
+    border-radius:50%;
+    background:var(--line);
+    border:2px solid var(--line);
+    cursor:pointer;
+    transition:transform .25s ease, background .25s ease, border-color .25s ease;
+    flex:0 0 auto;
+  }
+  .dot:hover{ transform:scale(1.25); }
+  .dot.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    transform:scale(1.4);
+  }
+  .dot.done{
+    background:var(--accent-soft);
+    border-color:var(--accent);
+  }
+
+  /* the canvas where the cell lives */
+  .canvas-wrap{
+    position:relative;
+    width:100%;
+    aspect-ratio: 16/10;
+    max-height:62vh;
+    background:
+      radial-gradient(circle at 50% 18%, #ffffff 0%, var(--bg-1) 70%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  #cellSvg{
+    width:min(100%, 640px);
+    height:100%;
+    display:block;
+  }
+
+  /* stage label + caption */
+  .stage-info{
+    text-align:center;
+    padding:6px 22px 18px;
+  }
+  .stage-name{
+    font-family:var(--font-display);
+    font-size:clamp(19px,3.4vw,26px);
+    color:var(--accent-dark);
+    margin:0 0 6px;
+    transition:opacity .25s ease;
+  }
+  .stage-desc{
+    font-size:clamp(14px,2.4vw,17px);
+    color:var(--ink-soft);
+    margin:0 auto;
+    max-width:680px;
+    line-height:1.5;
+    transition:opacity .25s ease;
+  }
+  .stage-counter{
+    margin-top:8px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    letter-spacing:0.4px;
+    text-transform:uppercase;
+    opacity:0.75;
+  }
+
+  /* ============================================================
+     3. CONTROLS
+     ============================================================ */
+  .controls{
+    width:100%;
+    max-width:980px;
+    margin-top:16px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .controls-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  button{
+    font-family:var(--font-body);
+    border:none;
+    cursor:pointer;
+    outline-offset:3px;
+  }
+  button:focus-visible{
+    outline:3px solid var(--accent-dark);
+  }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:var(--paper);
+    color:var(--accent-dark);
+    border:2px solid var(--accent);
+    padding:12px 18px;
+    border-radius:999px;
+    font-size:15px;
+    font-weight:600;
+    box-shadow:var(--shadow-soft);
+    transition:transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+    min-height:48px;
+    min-width:48px;
+    justify-content:center;
+  }
+  .btn:hover{ transform:translateY(-2px); box-shadow:var(--shadow-pop); }
+  .btn:active{ transform:translateY(0px) scale(0.97); }
+
+  .btn.primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+  }
+  .btn.primary:hover{ background:var(--accent-dark); }
+
+  .btn.ghost{
+    background:transparent;
+    border-color:var(--line);
+    color:var(--ink-soft);
+  }
+  .btn.ghost:hover{ border-color:var(--accent); color:var(--accent-dark); }
+
+  .btn:disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+    transform:none !important;
+    box-shadow:none;
+  }
+
+  .icon{ font-size:18px; line-height:1; }
+
+  .speed-wrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--paper);
+    border:2px solid var(--line);
+    border-radius:999px;
+    padding:6px 14px;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .speed-wrap select{
+    border:none;
+    background:transparent;
+    font-size:14px;
+    color:var(--ink);
+    font-weight:600;
+    cursor:pointer;
+  }
+
+  /* stage chips - quick jump list, visible on wider screens */
+  .stage-chips{
+    width:100%;
+    max-width:980px;
+    margin-top:6px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+  }
+  .chip{
+    background:var(--paper);
+    border:1.5px solid var(--line);
+    color:var(--ink-soft);
+    font-size:12.5px;
+    padding:7px 12px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:all .2s ease;
+    white-space:nowrap;
+  }
+  .chip:hover{ border-color:var(--accent); color:var(--accent-dark); }
+  .chip.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+    font-weight:600;
+  }
+
+  footer.note{
+    max-width:980px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:12px;
+    margin-top:18px;
+    opacity:0.8;
+    padding:0 10px;
+  }
+
+  /* ============================================================
+     4. RESPONSIVE TWEAKS
+     ============================================================ */
+  @media (max-width:600px){
+    .canvas-wrap{ aspect-ratio: 4/5; max-height:54vh; }
+    .btn{ padding:11px 14px; font-size:13.5px; }
+    .stage-chips{ display:none; } /* keep mobile UI uncluttered; dots + buttons suffice */
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  /* simple fade utility used by JS when swapping captions */
+  .fade-out{ opacity:0; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="top">
+    <h1>🔬 Cell Division — How One Cell Becomes Two</h1>
+    <p class="sub">An interactive walk-through of mitosis for Class 9 Biology</p>
+  </header>
+
+  <div class="stage-frame">
+
+    <!-- progress dots -->
+    <div class="progress-row" id="progressRow" aria-label="Stage progress"></div>
+
+    <!-- main animation canvas -->
+    <div class="canvas-wrap">
+      <svg id="cellSvg" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg">
+        <!-- All animated shapes are injected / controlled by JavaScript below -->
+
+        <!-- soft background ring -->
+        <circle cx="300" cy="220" r="190" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.5"></circle>
+
+        <!-- ===== SINGLE PARENT CELL GROUP (stages 0-2) ===== -->
+        <g id="parentGroup">
+          <circle id="parentMembrane" cx="300" cy="220" r="100" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
+          <circle id="parentNucleus" cx="300" cy="220" r="46" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="3"></circle>
+          <!-- chromosomes inside parent nucleus, appear in stage 2 -->
+          <g id="parentChromos" opacity="0"></g>
+        </g>
+
+        <!-- ===== ALIGNMENT / SEPARATION GROUP (stages 3-4) ===== -->
+        <g id="divideGroup" opacity="0">
+          <ellipse id="divideMembrane" cx="300" cy="220" rx="160" ry="100" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></ellipse>
+          <!-- spindle fibre guide lines -->
+          <g id="spindleLines" stroke="var(--spindle)" stroke-width="2" opacity="0.55"></g>
+          <line id="equatorLine" x1="300" y1="120" x2="300" y2="320" stroke="var(--spindle)" stroke-width="2" stroke-dasharray="6 6" opacity="0.7"></line>
+          <g id="movingChromos"></g>
+        </g>
+
+        <!-- ===== TWO DAUGHTER CELLS GROUP (stages 5-6) ===== -->
+        <g id="daughterGroup" opacity="0">
+          <g id="daughterLeft">
+            <circle cx="220" cy="220" r="86" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
+            <circle cx="220" cy="220" r="40" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="3"></circle>
+            <g id="leftChromos"></g>
+          </g>
+          <g id="daughterRight">
+            <circle cx="380" cy="220" r="86" fill="var(--cytoplasm)" stroke="var(--cell-wall)" stroke-width="5"></circle>
+            <circle cx="380" cy="220" r="40" fill="var(--nucleus)" stroke="var(--nucleus-edge)" stroke-width="3"></circle>
+            <g id="rightChromos"></g>
+          </g>
+        </g>
+
+        <!-- little floating sparkle dots for "growth" feel, stage 1 -->
+        <g id="growthSparkles" opacity="0"></g>
+
+      </svg>
+    </div>
+
+    <!-- text info -->
+    <div class="stage-info">
+      <h2 class="stage-name" id="stageName">Resting Cell</h2>
+      <p class="stage-desc" id="stageDesc">This is a normal living cell, not yet dividing.</p>
+      <div class="stage-counter" id="stageCounter">Stage 1 of 7</div>
+    </div>
+  </div>
+
+  <!-- controls -->
+  <div class="controls">
+    <div class="controls-row">
+      <button class="btn ghost" id="restartBtn" title="Restart">
+        <span class="icon">⟲</span><span>Restart</span>
+      </button>
+      <button class="btn" id="prevBtn" title="Previous stage">
+        <span class="icon">◀</span><span>Previous</span>
+      </button>
+      <button class="btn primary" id="playPauseBtn" title="Play / Pause auto mode">
+        <span class="icon" id="playIcon">▶</span><span id="playLabel">Play</span>
+      </button>
+      <button class="btn" id="nextBtn" title="Next stage">
+        <span>Next</span><span class="icon">▶</span>
+      </button>
+    </div>
+    <div class="controls-row">
+      <div class="speed-wrap">
+        <span>⏱ Auto speed:</span>
+        <select id="speedSelect">
+          <option value="5500">Slow</option>
+          <option value="3800" selected>Normal</option>
+          <option value="2200">Fast</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- quick-jump chips for desktop -->
+  <div class="stage-chips" id="stageChips"></div>
+
+  <footer class="note">Tap any dot or chip to jump straight to that stage. Built for classroom projectors and mobile revision alike.</footer>
+
+</div>
+
+<script>
+/* ================================================================
+   CELL DIVISION (MITOSIS) — ANIMATION ENGINE
+   ----------------------------------------------------------------
+   This script is organised into clear sections:
+     A. Stage data (names, descriptions, durations)
+     B. SVG helper builders (drawing chromosomes/sparkles dynamically)
+     C. Stage renderer (shows/hides/animates the right SVG groups)
+     D. Navigation controller (next/prev/jump/restart)
+     E. Autoplay engine (play/pause + timer)
+     F. UI wiring (buttons, dots, chips, keyboard, touch)
+   ================================================================ */
+
+(function(){
+  "use strict";
+
+  /* ---------------- A. STAGE DATA ---------------- */
+  const stages = [
+    {
+      name: "Resting Cell",
+      desc: "This is a normal living cell, with its nucleus clearly visible inside the cytoplasm."
+    },
+    {
+      name: "Growth & Preparation",
+      desc: "Before dividing, the cell grows in size and stores up energy and material it will need."
+    },
+    {
+      name: "Chromosomes Appear",
+      desc: "Thread-like chromosomes form inside the nucleus and become thick and visible."
+    },
+    {
+      name: "Chromosome Alignment",
+      desc: "The nuclear membrane breaks down and chromosomes line up along the middle of the cell."
+    },
+    {
+      name: "Chromosome Separation",
+      desc: "The paired chromosome strands are pulled apart and move to opposite ends of the cell."
+    },
+    {
+      name: "Formation of Daughter Cells",
+      desc: "The cytoplasm pinches inward at the centre, splitting the cell into two new cells."
+    },
+    {
+      name: "Two Daughter Cells",
+      desc: "Division is complete — two smaller cells now exist, each identical to the original parent cell."
+    }
+  ];
+
+  const TOTAL = stages.length;
+  let current = 0;          // index of current stage
+  let isPlaying = false;
+  let autoTimer = null;
+  let animTimer = null;     // guards in-flight per-stage animation timeouts
+
+  /* ---------------- B. SVG HELPERS ---------------- */
+  const svgNS = "http://www.w3.org/2000/svg";
+
+  function el(tag, attrs){
+    const e = document.createElementNS(svgNS, tag);
+    for(const k in attrs){ e.setAttribute(k, attrs[k]); }
+    return e;
+  }
+
+  // Draw a simple "X" shaped chromosome (two crossed bars) at a position/scale/color
+  function makeChromosome(cx, cy, color, colorDark, scale, rotation){
+    scale = scale || 1;
+    rotation = rotation || 0;
+    const g = el("g", {
+      transform: `translate(${cx},${cy}) rotate(${rotation}) scale(${scale})`
+    });
+    // four little arms to suggest the classic X / chromatid shape
+    const arm = (x1,y1,x2,y2) => el("line", {
+      x1, y1, x2, y2,
+      stroke: colorDark, "stroke-width": 4.2, "stroke-linecap":"round"
+    });
+    g.appendChild(arm(-7,-12, -1,0));
+    g.appendChild(arm(7,-12, 1,0));
+    g.appendChild(arm(-7,12, -1,0));
+    g.appendChild(arm(7,12, 1,0));
+    const core = el("circle", { cx:0, cy:0, r:5, fill: color, stroke: colorDark, "stroke-width":2 });
+    g.appendChild(core);
+    return g;
+  }
+
+  // Single-strand (separated) chromosome — simpler line shape, used after separation
+  function makeSingleChromosome(cx, cy, color, colorDark, scale, rotation){
+    scale = scale || 1;
+    rotation = rotation || 0;
+    const g = el("g", {
+      transform: `translate(${cx},${cy}) rotate(${rotation}) scale(${scale})`
+    });
+    g.appendChild(el("line", { x1:-9, y1:-11, x2:9, y2:11, stroke: colorDark, "stroke-width": 4.2, "stroke-linecap":"round" }));
+    g.appendChild(el("line", { x1:9, y1:-11, x2:-9, y2:11, stroke: colorDark, "stroke-width": 4.2, "stroke-linecap":"round" }));
+    g.appendChild(el("circle", { cx:0, cy:0, r:4.5, fill: color, stroke: colorDark, "stroke-width":1.8 }));
+    return g;
+  }
+
+  function clearChildren(node){
+    while(node.firstChild){ node.removeChild(node.firstChild); }
+  }
+
+  /* ---------------- DOM refs ---------------- */
+  const parentGroup    = document.getElementById('parentGroup');
+  const parentMembrane = document.getElementById('parentMembrane');
+  const parentNucleus  = document.getElementById('parentNucleus');
+  const parentChromos  = document.getElementById('parentChromos');
+  const growthSparkles = document.getElementById('growthSparkles');
+
+  const divideGroup    = document.getElementById('divideGroup');
+  const divideMembrane = document.getElementById('divideMembrane');
+  const spindleLines   = document.getElementById('spindleLines');
+  const equatorLine    = document.getElementById('equatorLine');
+  const movingChromos  = document.getElementById('movingChromos');
+
+  const daughterGroup  = document.getElementById('daughterGroup');
+  const leftChromos    = document.getElementById('leftChromos');
+  const rightChromos   = document.getElementById('rightChromos');
+
+  const stageNameEl = document.getElementById('stageName');
+  const stageDescEl = document.getElementById('stageDesc');
+  const stageCounterEl = document.getElementById('stageCounter');
+  const progressRow = document.getElementById('progressRow');
+  const stageChips  = document.getElementById('stageChips');
+
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const playIcon = document.getElementById('playIcon');
+  const playLabel = document.getElementById('playLabel');
+  const restartBtn = document.getElementById('restartBtn');
+  const speedSelect = document.getElementById('speedSelect');
+
+  /* ---------------- build progress dots + chips once ---------------- */
+  stages.forEach((s, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'dot';
+    dot.setAttribute('aria-label', 'Go to stage ' + (i+1) + ': ' + s.name);
+    dot.addEventListener('click', () => jumpTo(i));
+    progressRow.appendChild(dot);
+
+    const chip = document.createElement('button');
+    chip.className = 'chip';
+    chip.textContent = (i+1) + '. ' + s.name;
+    chip.addEventListener('click', () => jumpTo(i));
+    stageChips.appendChild(chip);
+  });
+
+  function refreshProgressUI(){
+    const dots = progressRow.querySelectorAll('.dot');
+    const chips = stageChips.querySelectorAll('.chip');
+    dots.forEach((d,i) => {
+      d.classList.toggle('active', i === current);
+      d.classList.toggle('done', i < current);
+    });
+    chips.forEach((c,i) => c.classList.toggle('active', i === current));
+    stageCounterEl.textContent = `Stage ${current+1} of ${TOTAL}`;
+    prevBtn.disabled = (current === 0);
+    nextBtn.disabled = (current === TOTAL - 1);
+  }
+
+  /* ---------------- C. STAGE RENDERER ---------------- */
+  // Resets all dynamic groups to a known baseline before drawing a stage.
+  function resetVisualGroups(){
+    if(animTimer){ clearTimeout(animTimer); animTimer = null; }
+
+    parentGroup.style.opacity = 0;
+    divideGroup.style.opacity = 0;
+    daughterGroup.style.opacity = 0;
+    growthSparkles.style.opacity = 0;
+
+    parentMembrane.setAttribute('r', 100);
+    parentNucleus.setAttribute('r', 46);
+    parentChromos.style.opacity = 0;
+    clearChildren(parentChromos);
+    clearChildren(growthSparkles);
+    clearChildren(spindleLines);
+    clearChildren(movingChromos);
+    clearChildren(leftChromos);
+    clearChildren(rightChromos);
+    equatorLine.style.opacity = 0;
+    divideMembrane.setAttribute('rx', 160);
+    divideMembrane.setAttribute('ry', 100);
+  }
+
+  // chromosome pair colors used consistently across all stages
+  const PAIR_COLORS = [
+    { c: 'var(--chromo-a)', d: 'var(--chromo-a-dark)' },
+    { c: 'var(--chromo-b)', d: 'var(--chromo-b-dark)' }
+  ];
+
+  function renderStage(index){
+    resetVisualGroups();
+    const fade = 450; // ms used for CSS opacity transitions on groups
+
+    [parentGroup, divideGroup, daughterGroup, growthSparkles, parentChromos].forEach(g=>{
+      g.style.transition = `opacity ${fade}ms ease`;
+    });
+
+    switch(index){
+
+      /* ---- 0: Resting cell ---- */
+      case 0: {
+        parentGroup.style.opacity = 1;
+        break;
+      }
+
+      /* ---- 1: Growth & preparation ---- */
+      case 1: {
+        parentGroup.style.opacity = 1;
+        growthSparkles.style.opacity = 1;
+        // animate membrane + nucleus growing slightly larger
+        parentMembrane.style.transition = 'r 1400ms ease';
+        parentNucleus.style.transition = 'r 1400ms ease';
+        requestAnimationFrame(()=>{
+          parentMembrane.setAttribute('r', 112);
+          parentNucleus.setAttribute('r', 52);
+        });
+        // sparkles representing energy/material build-up
+        for(let i=0;i<8;i++){
+          const angle = (Math.PI*2/8)*i;
+          const r = 130 + (i%2===0 ? 8 : -4);
+          const sx = 300 + Math.cos(angle)*r;
+          const sy = 220 + Math.sin(angle)*r;
+          const dot = el('circle', { cx:sx, cy:sy, r:4, fill:'var(--spindle)', opacity:0 });
+          growthSparkles.appendChild(dot);
+          dot.style.transition = `opacity 900ms ease ${i*90}ms`;
+          requestAnimationFrame(()=> dot.style.opacity = 0.85);
+        }
+        break;
+      }
+
+      /* ---- 2: Chromosomes appear ---- */
+      case 2: {
+        parentGroup.style.opacity = 1;
+        parentMembrane.setAttribute('r', 112);
+        parentNucleus.setAttribute('r', 52);
+
+        const positions = [
+          {x:-16,y:-14, rot:20}, {x:16,y:-12, rot:-15},
+          {x:-14,y:14, rot:-25}, {x:15,y:15, rot:10}
+        ];
+        positions.forEach((p,i)=>{
+          const colorSet = PAIR_COLORS[i % 2];
+          const chromo = makeChromosome(300+p.x, 220+p.y, colorSet.c, colorSet.d, 0.001, p.rot);
+          parentChromos.appendChild(chromo);
+        });
+        parentChromos.style.opacity = 1;
+        // pop the chromosomes in with a little scale grow
+        requestAnimationFrame(()=>{
+          Array.from(parentChromos.children).forEach((g, i)=>{
+            g.style.transition = `transform 600ms cubic-bezier(.34,1.56,.64,1) ${i*90}ms`;
+            const p = positions[i];
+            g.setAttribute('transform', `translate(${300+p.x},${220+p.y}) rotate(${p.rot}) scale(1.4)`);
+          });
+        });
+        break;
+      }
+
+      /* ---- 3: Alignment ---- */
+      case 3: {
+        divideGroup.style.opacity = 1;
+        divideMembrane.setAttribute('rx', 160);
+        divideMembrane.setAttribute('ry', 100);
+
+        // spindle guide fibres fanning from two poles toward the equator
+        const poles = [ {x:140,y:220}, {x:460,y:220} ];
+        poles.forEach(pole=>{
+          for(let i=-2;i<=2;i++){
+            const ty = 220 + i*32;
+            spindleLines.appendChild(el('line', {
+              x1: pole.x, y1: 220, x2: 300, y2: ty
+            }));
+          }
+        });
+
+        equatorLine.style.transition = 'opacity 500ms ease';
+        requestAnimationFrame(()=> equatorLine.style.opacity = 0.7);
+
+        // four chromosomes lined up at the cell's equator (metaphase plate)
+        const yPositions = [-45,-15,15,45];
+        yPositions.forEach((y,i)=>{
+          const colorSet = PAIR_COLORS[i % 2];
+          const chromo = makeChromosome(300, 220+y, colorSet.c, colorSet.d, 0, 90);
+          movingChromos.appendChild(chromo);
+          requestAnimationFrame(()=>{
+            chromo.style.transition = `transform 700ms cubic-bezier(.34,1.2,.64,1) ${i*80}ms`;
+            chromo.setAttribute('transform', `translate(300,${220+y}) rotate(90) scale(1.3)`);
+          });
+        });
+        break;
+      }
+
+      /* ---- 4: Separation ---- */
+      case 4: {
+        divideGroup.style.opacity = 1;
+        const poles = [ {x:140,y:220}, {x:460,y:220} ];
+        poles.forEach(pole=>{
+          for(let i=-2;i<=2;i++){
+            const ty = 220 + i*32;
+            spindleLines.appendChild(el('line', {
+              x1: pole.x, y1: 220, x2: 300, y2: ty
+            }));
+          }
+        });
+        equatorLine.style.opacity = 0.35;
+
+        const yPositions = [-45,-15,15,45];
+        // start them at the equator (single chromatid look), then pull apart to poles
+        yPositions.forEach((y,i)=>{
+          const colorSet = PAIR_COLORS[i % 2];
+          const startX = 300;
+          const chromo = makeSingleChromosome(startX, 220+y, colorSet.c, colorSet.d, 1.3, 0);
+          movingChromos.appendChild(chromo);
+        });
+        requestAnimationFrame(()=>{
+          Array.from(movingChromos.children).forEach((g, i)=>{
+            const y = yPositions[i];
+            const targetX = (i < 2) ? 195 : 405; // two go left, two go right
+            g.style.transition = `transform 1100ms cubic-bezier(.45,.05,.55,.95)`;
+            g.setAttribute('transform', `translate(${targetX},${220+y}) scale(1.3)`);
+          });
+        });
+        break;
+      }
+
+      /* ---- 5: Formation of daughter cells (cytoplasm splitting) ---- */
+      case 5: {
+        divideGroup.style.opacity = 1;
+        equatorLine.style.opacity = 0;
+        spindleLines.style.opacity = 0;
+
+        const yPositions = [-45,-15,15,45];
+        yPositions.forEach((y,i)=>{
+          const colorSet = PAIR_COLORS[i % 2];
+          const targetX = (i < 2) ? 195 : 405;
+          const chromo = makeSingleChromosome(targetX, 220+y, colorSet.c, colorSet.d, 1.3, 0);
+          movingChromos.appendChild(chromo);
+        });
+
+        // animate the single ellipse pinching into a figure-eight / dumbbell via rx/ry shrink
+        divideMembrane.style.transition = 'rx 1200ms ease, ry 1200ms ease';
+        requestAnimationFrame(()=>{
+          divideMembrane.setAttribute('rx', 95);
+          divideMembrane.setAttribute('ry', 88);
+        });
+        // a thin neck line suggesting the pinch — drawn as two opposing crescents using stroke trick
+        const neckTop = el('line', { x1:300, y1:140, x2:300, y2:300, stroke:'var(--cell-wall)', 'stroke-width':0, opacity:0 });
+        divideGroup.insertBefore(neckTop, spindleLines);
+        neckTop.style.transition = 'stroke-width 1200ms ease, opacity 600ms ease';
+        requestAnimationFrame(()=>{
+          neckTop.setAttribute('stroke-width', 6);
+          neckTop.style.opacity = 0.9;
+        });
+        break;
+      }
+
+      /* ---- 6: Two daughter cells complete ---- */
+      case 6: {
+        daughterGroup.style.opacity = 1;
+        const yPositions = [-30,30];
+        // left daughter cell chromosomes (2 single chromatids)
+        yPositions.forEach((y,i)=>{
+          const colorSet = PAIR_COLORS[i % 2];
+          leftChromos.appendChild(makeSingleChromosome(220, 220+y, colorSet.c, colorSet.d, 1.1, 0));
+          rightChromos.appendChild(makeSingleChromosome(380, 220+y, colorSet.c, colorSet.d, 1.1, 0));
+        });
+        // gentle pop-in
+        [daughterGroup].forEach(g=>{
+          g.style.transform = 'scale(0.92)';
+          g.style.transformOrigin = '300px 220px';
+          g.style.transition = 'opacity 500ms ease, transform 600ms cubic-bezier(.34,1.4,.64,1)';
+          requestAnimationFrame(()=>{
+            g.style.opacity = 1;
+            g.style.transform = 'scale(1)';
+          });
+        });
+        break;
+      }
+    }
+  }
+
+  /* ---------------- text + UI update ---------------- */
+  function renderText(index){
+    stageNameEl.classList.add('fade-out');
+    stageDescEl.classList.add('fade-out');
+    setTimeout(()=>{
+      stageNameEl.textContent = stages[index].name;
+      stageDescEl.textContent = stages[index].desc;
+      stageNameEl.classList.remove('fade-out');
+      stageDescEl.classList.remove('fade-out');
+    }, 180);
+  }
+
+  function goToStage(index){
+    current = Math.max(0, Math.min(TOTAL - 1, index));
+    renderStage(current);
+    renderText(current);
+    refreshProgressUI();
+  }
+
+  /* ---------------- D. NAVIGATION CONTROLLER ---------------- */
+  function next(){
+    if(current < TOTAL - 1){
+      goToStage(current + 1);
+    } else {
+      stopAutoplay(); // reached the end naturally
+    }
+  }
+  function prev(){
+    if(current > 0){ goToStage(current - 1); }
+  }
+  function jumpTo(index){
+    stopAutoplay();
+    goToStage(index);
+  }
+  function restart(){
+    stopAutoplay();
+    goToStage(0);
+  }
+
+  /* ---------------- E. AUTOPLAY ENGINE ---------------- */
+  function startAutoplay(){
+    isPlaying = true;
+    playIcon.textContent = '⏸';
+    playLabel.textContent = 'Pause';
+    scheduleNext();
+  }
+  function stopAutoplay(){
+    isPlaying = false;
+    playIcon.textContent = '▶';
+    playLabel.textContent = 'Play';
+    if(autoTimer){ clearTimeout(autoTimer); autoTimer = null; }
+  }
+  function scheduleNext(){
+    if(autoTimer){ clearTimeout(autoTimer); }
+    const delay = parseInt(speedSelect.value, 10);
+    autoTimer = setTimeout(()=>{
+      if(current < TOTAL - 1){
+        next();
+        if(isPlaying) scheduleNext();
+      } else {
+        stopAutoplay();
+      }
+    }, delay);
+  }
+
+  /* ---------------- F. UI WIRING ---------------- */
+  prevBtn.addEventListener('click', ()=>{ stopAutoplay(); prev(); });
+  nextBtn.addEventListener('click', ()=>{ stopAutoplay(); next(); });
+  restartBtn.addEventListener('click', restart);
+
+  playPauseBtn.addEventListener('click', ()=>{
+    if(isPlaying){ stopAutoplay(); }
+    else {
+      if(current === TOTAL - 1){ goToStage(0); } // restart loop if already at end
+      startAutoplay();
+    }
+  });
+
+  speedSelect.addEventListener('change', ()=>{
+    if(isPlaying){ scheduleNext(); } // re-schedule with new speed immediately
+  });
+
+  // keyboard support for desktop
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowRight'){ stopAutoplay(); next(); }
+    else if(e.key === 'ArrowLeft'){ stopAutoplay(); prev(); }
+    else if(e.code === 'Space'){ e.preventDefault(); playPauseBtn.click(); }
+  });
+
+  // basic swipe support for mobile touch on the canvas
+  (function enableSwipe(){
+    const target = document.querySelector('.canvas-wrap');
+    let touchStartX = null;
+    target.addEventListener('touchstart', (e)=>{
+      touchStartX = e.changedTouches[0].clientX;
+    }, {passive:true});
+    target.addEventListener('touchend', (e)=>{
+      if(touchStartX === null) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if(Math.abs(dx) > 40){
+        stopAutoplay();
+        if(dx < 0) next(); else prev();
+      }
+      touchStartX = null;
+    }, {passive:true});
+  })();
+
+  /* ---------------- INITIAL RENDER ---------------- */
+  goToStage(0);
+
+})();
+</script>
+
+</body>
+</html>
